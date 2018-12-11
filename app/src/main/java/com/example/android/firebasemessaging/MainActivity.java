@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
                 FirebaseDatabase.getInstance()
                         .getReference()
                         .child("users")
-                        .push()
+                        .child(user.getUserID())
                         .setValue(user);
                 displayUserList();
             } else {
