@@ -168,7 +168,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void beginChat(String userUid, String userName){
         if(!userUid.equals(FirebaseAuth.getInstance().getCurrentUser().getUid())) {
-            Intent intent = new Intent(getApplicationContext(), ChatRoomActivity.class);
+            final Intent intent = new Intent(getApplicationContext(), ChatRoomActivity.class);
             intent.putExtra("user_uid", userUid);
             intent.putExtra("user_name", userName);
             startActivity(intent);

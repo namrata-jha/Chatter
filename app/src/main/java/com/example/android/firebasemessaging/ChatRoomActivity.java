@@ -9,9 +9,7 @@ import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
-import android.widget.Toast;
 
-import com.firebase.ui.auth.ui.email.WelcomeBackPasswordPrompt;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -32,6 +30,7 @@ public class ChatRoomActivity extends AppCompatActivity {
     private MessageListAdapter adapter;
     private MessageUser userData;
     private MessageUser myData;
+    private int uFavourite, mFavourite;
 
 
     @Override
@@ -46,7 +45,7 @@ public class ChatRoomActivity extends AppCompatActivity {
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                        if (dataSnapshot.exists()){
+                        if (dataSnapshot.exists()) {
                             FirebaseDatabase.getInstance().getReference()
                                     .child("chats")
                                     .child(myUid)
@@ -80,7 +79,7 @@ public class ChatRoomActivity extends AppCompatActivity {
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                        if (dataSnapshot.exists()){
+                        if (dataSnapshot.exists()) {
                             FirebaseDatabase.getInstance().getReference()
                                     .child("chats")
                                     .child(myUid)
@@ -97,7 +96,7 @@ public class ChatRoomActivity extends AppCompatActivity {
                     }
                 });
 
-            setUserOnlineState(false);
+        setUserOnlineState(false);
     }
 
 
@@ -160,62 +159,10 @@ public class ChatRoomActivity extends AppCompatActivity {
                 // Read the input field and push a new instance of ChatMessage to the Firebase database
                 final String message = input.getText().toString();
                 if (!message.equals("")) {
-                    dbRef.child("chats")
-                            .child(myUid)
-                            .child(userUid)
-                            .push()
-                            .setValue(new ChatMessage(message,myData));
 
-                    dbRef.child("chats")
-                            .child(userUid)
-                            .child(myUid)
-                            .push()
-                            .setValue(new ChatMessage(message,myData));
-
-                    dbRef.child("users")
-                            .child(userUid)
-                            .child("online")
-                            .addListenerForSingleValueEvent(new ValueEventListener() {
-                                @Override
-                                public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                                    if(dataSnapshot.exists()){
-                                        boolean online = dataSnapshot.getValue(Boolean.class);
-                                        dbRef.child("chats")
-                                                .child(myUid)
-                                                .child("chat_list")
-                                                .child(userUid)
-                                                .setValue(new ChatListUser(userData, -1* new Date().getTime()
-                                                        , message, false, online));
-                                    }
-                                    else {
-                                        dbRef.child("chats")
-                                                .child(myUid)
-                                                .child("chat_list")
-                                                .child(userUid)
-                                                .setValue(new ChatListUser(userData, -1* new Date().getTime(), message));
-                                    }
-                                }
-
-                                @Override
-                                public void onCancelled(@NonNull DatabaseError databaseError) {
-
-                                }
-                            });
-
-                    dbRef.child("chats")
-                            .child(myUid)
-                            .child("chat_list")
-                            .child(userUid)
-                            .setValue(new ChatListUser(userData, -1* new Date().getTime(), message));
-
-
-                    dbRef.child("chats")
-                            .child(userUid)
-                            .child("chat_list")
-                            .child(myUid)
-                            .setValue(new ChatListUser(myData, -1* new Date().getTime()
-                                    , message, true, true));
-
+                    sendMessageToChats(myUid, userUid, message);
+                    addMessageToMyChatList(message);
+                    addMessageToUserChatList(message);
 
                     // Clear the input
                     input.setText("");
@@ -228,8 +175,7 @@ public class ChatRoomActivity extends AppCompatActivity {
     }
 
 
-
-    private void displayChatMessages(){
+    private void displayChatMessages() {
 
         listOfMessages = findViewById(R.id.list_of_messages);
 
@@ -268,7 +214,7 @@ public class ChatRoomActivity extends AppCompatActivity {
         listOfMessages.setLayoutManager(layoutManager);
     }
 
-    public void setUserOnlineState(final boolean state){
+    public void setUserOnlineState(final boolean state) {
         Boolean bool = state;
         final String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
         FirebaseDatabase.getInstance().getReference().child("users").child(uid).child("online").setValue(bool);
@@ -303,4 +249,153 @@ public class ChatRoomActivity extends AppCompatActivity {
             }
         });
     }
+
+    private void sendMessageToChats(String from, String to, String message) {
+        DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference();
+        dbRef.child("chats")
+                .child(from)
+                .child(to)
+                .push()
+                .setValue(new ChatMessage(message, myData));
+
+        dbRef.child("chats")
+                .child(to)
+                .child(from)
+                .push()
+                .setValue(new ChatMessage(message, myData));
+
+    }
+
+    private void addMessageToMyChatList(final String message) {
+        final DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference();
+
+        dbRef.child("chats")
+                .child(myUid)
+                .child("chat_list")
+                .child(userUid)
+                .child("favourite")
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        if (dataSnapshot.exists()) {
+                            mFavourite = dataSnapshot.getValue(Integer.class);
+                            Log.i("MyLogs", "MStage 1");
+                            dbRef.child("users")
+                                    .child(userUid)
+                                    .child("online")
+                                    .addListenerForSingleValueEvent(new ValueEventListener() {
+                                        @Override
+                                        public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                                            if (dataSnapshot.exists()) {
+                                                Log.i("MyLogs", "MStage 2 (if)");
+                                                boolean online = dataSnapshot.getValue(Boolean.class);
+                                                dbRef.child("chats")
+                                                        .child(myUid)
+                                                        .child("chat_list")
+                                                        .child(userUid)
+                                                        .setValue(new ChatListUser(userData, -1 * new Date().getTime()
+                                                                , message, false, online, mFavourite));
+                                            } else {
+                                                Log.i("MyLogs", "MStage 2 (else)");
+                                                dbRef.child("chats")
+                                                        .child(myUid)
+                                                        .child("chat_list")
+                                                        .child(userUid)
+                                                        .setValue(new ChatListUser(userData, -1 * new Date().getTime()
+                                                                , message, mFavourite));
+                                            }
+                                        }
+
+                                        @Override
+                                        public void onCancelled(@NonNull DatabaseError databaseError) {
+
+                                        }
+                                    });
+                        }
+                        else {
+                            Log.i("MyLogs", "MStage 4 Fav doesn't exist");
+                            dbRef.child("users")
+                                    .child(userUid)
+                                    .child("online")
+                                    .addListenerForSingleValueEvent(new ValueEventListener() {
+                                        @Override
+                                        public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                                            if (dataSnapshot.exists()) {
+                                                Log.i("MyLogs", "MStage 5(if)");
+                                                boolean online = dataSnapshot.getValue(Boolean.class);
+                                                dbRef.child("chats")
+                                                        .child(myUid)
+                                                        .child("chat_list")
+                                                        .child(userUid)
+                                                        .setValue(new ChatListUser(userData, -1 * new Date().getTime()
+                                                                , message, false, online, 0));
+                                            } else {
+                                                Log.i("MyLogs", "MStage 5 (else)");
+                                                dbRef.child("chats")
+                                                        .child(myUid)
+                                                        .child("chat_list")
+                                                        .child(userUid)
+                                                        .setValue(new ChatListUser(userData, -1 * new Date().getTime()
+                                                                , message, 0));
+                                            }
+                                        }
+
+                                        @Override
+                                        public void onCancelled(@NonNull DatabaseError databaseError) {
+
+                                        }
+                                    });
+                        }
+
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+
+                    }
+                });
+    }
+
+    private void addMessageToUserChatList(final String message) {
+        final DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference();
+
+        dbRef.child("chats")
+                .child(userUid)
+                .child("chat_list")
+                .child(myUid)
+                .child("favourite")
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        if (dataSnapshot.exists()) {
+                            Log.i("MyLogs", "UStage1 (if)");
+                            uFavourite = dataSnapshot.getValue(Integer.class);
+
+                            dbRef.child("chats")
+                                    .child(userUid)
+                                    .child("chat_list")
+                                    .child(myUid)
+                                    .setValue(new ChatListUser(myData, -1 * new Date().getTime()
+                                            , message, true, true, uFavourite));
+                        }
+                        else{
+                            Log.i("MyLogs", "UStage 1 (else");
+                            dbRef.child("chats")
+                                    .child(userUid)
+                                    .child("chat_list")
+                                    .child(myUid)
+                                    .setValue(new ChatListUser(myData, -1 * new Date().getTime()
+                                            , message, true, true, 0));
+                        }
+
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+
+                    }
+                });
+
+    }
 }
+
