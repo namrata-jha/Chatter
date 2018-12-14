@@ -6,6 +6,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -15,9 +16,14 @@ import com.firebase.ui.auth.AuthUI;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.Query;
+import com.google.firebase.database.ValueEventListener;
 
+import java.util.ArrayList;
 import java.util.Objects;
 
 
@@ -25,6 +31,34 @@ public class MainActivity extends AppCompatActivity {
 
     private final int SIGN_IN_REQUEST_CODE = 1;
     private final int START_CHAT_REQUEST_CODE = 2;
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        Log.i("MyLogs", "onResume called");
+        if(FirebaseAuth.getInstance().getCurrentUser() != null)  {
+            setUserOnlineState(true);
+        }
+
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if(FirebaseAuth.getInstance().getCurrentUser() != null){
+            setUserOnlineState(false);
+        }
+    }
+
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if(FirebaseAuth.getInstance().getCurrentUser() != null) {
+            setUserOnlineState(false);
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,6 +82,7 @@ public class MainActivity extends AppCompatActivity {
                             .getDisplayName(),
                     Toast.LENGTH_LONG)
                     .show();
+            setUserOnlineState(true);
             displayUserList();
         }
 
@@ -106,6 +141,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if(item.getItemId() == R.id.menu_sign_out) {
+            setUserOnlineState(false);
             AuthUI.getInstance().signOut(this)
                     .addOnCompleteListener(new OnCompleteListener<Void>() {
                         @Override
@@ -131,10 +167,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void beginChat(String userUid, String userName){
-        Intent intent = new Intent(getApplicationContext(), ChatRoomActivity.class);
-        intent.putExtra("user_uid", userUid);
-        intent.putExtra("user_name", userName);
-        startActivity(intent);
+        if(!userUid.equals(FirebaseAuth.getInstance().getCurrentUser().getUid())) {
+            Intent intent = new Intent(getApplicationContext(), ChatRoomActivity.class);
+            intent.putExtra("user_uid", userUid);
+            intent.putExtra("user_name", userName);
+            startActivity(intent);
+        }
+        else{
+            Toast.makeText(this, "Cannot initiate chat with self.", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void displayUserList(){
@@ -148,10 +189,46 @@ public class MainActivity extends AppCompatActivity {
                 .orderByChild("lastMessageTime")
                 .limitToLast(50);
 
-        UserListAdapter adapter = new UserListAdapter(R.layout.user_layout, query);
+        UserListAdapter adapter = new UserListAdapter(R.layout.user_layout, query, getApplicationContext());
         listOfUsers.setAdapter(adapter);
 
         final LinearLayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
         listOfUsers.setLayoutManager(layoutManager);
+    }
+    public void setUserOnlineState(final boolean state){
+        Boolean bool = state;
+        final String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        FirebaseDatabase.getInstance().getReference().child("users").child(uid).child("online").setValue(bool);
+
+        final DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference();
+        DatabaseReference chatRef = dbRef
+                .child("chats")
+                .child(uid)
+                .child("chat_list");
+
+        chatRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                ArrayList<String> chatList = new ArrayList<>();
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    chatList.add(snapshot.getKey());
+                }
+                for (String userUid : chatList) {
+                    dbRef
+                            .child("chats")
+                            .child(userUid)
+                            .child("chat_list")
+                            .child(uid)
+                            .child("online")
+                            .setValue(state);
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
+
     }
 }

@@ -15,9 +15,22 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.util.ArrayList;
 import java.util.Objects;
 
 public class StartChatActivity extends AppCompatActivity {
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setUserOnlineState(true);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        setUserOnlineState(false);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,5 +83,40 @@ public class StartChatActivity extends AppCompatActivity {
         sendIntent.setType("text/plain");
         startActivity(sendIntent);
         finish();
+    }
+
+    public void setUserOnlineState(final boolean state){
+        final String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        final DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference();
+        DatabaseReference chatRef = dbRef
+                .child("chats")
+                .child(uid)
+                .child("chat_list");
+
+        chatRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                ArrayList<String> chatList = new ArrayList<>();
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    chatList.add(snapshot.getKey());
+                }
+                for (String userUid : chatList) {
+                    dbRef
+                            .child("chats")
+                            .child(userUid)
+                            .child("chat_list")
+                            .child(uid)
+                            .child("online")
+                            .setValue(state);
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
+
+        FirebaseDatabase.getInstance().getReference().child("users").child(uid).child("online").setValue(state);
     }
 }

@@ -4,23 +4,25 @@ public class ChatListUser extends MessageUser {
 
     private long lastMessageTime;
     private String lastMessage;
+    private boolean unreadMessages;
+    private boolean online;
 
-    public ChatListUser(String userName, String userID, String emailID, long lastMessageTime, long lastMessageTime1, String lastMessage) {
-        super(userName, userID, emailID);
-        this.lastMessageTime = lastMessageTime1;
-        this.lastMessage = lastMessage;
-    }
-
-    public ChatListUser(long lastMessageTime, String lastMessage) {
+    public ChatListUser(MessageUser messageUser, long lastMessageTime, String lastMessage, boolean unreadMessages, boolean online) {
+        super(messageUser.getUserName(), messageUser.getUserID(), messageUser.getEmailID());
         this.lastMessageTime = lastMessageTime;
         this.lastMessage = lastMessage;
+        this.unreadMessages = unreadMessages;
+        this.online = online;
     }
 
-    public ChatListUser(String userName, String userID, String emailID, long lastMessageTime, String lastMessage) {
-        super(userName, userID, emailID);
+    public ChatListUser(MessageUser messageUser, long lastMessageTime, String lastMessage, boolean unreadMessages) {
+        super(messageUser.getUserName(), messageUser.getUserID(), messageUser.getEmailID());
         this.lastMessageTime = lastMessageTime;
         this.lastMessage = lastMessage;
+        this.unreadMessages = unreadMessages;
+        online = false;
     }
+
 
     public ChatListUser(){
 
@@ -30,6 +32,8 @@ public class ChatListUser extends MessageUser {
         super(messageUser.getUserName(), messageUser.getUserID(), messageUser.getEmailID());
         this.lastMessageTime = lastMessageTime;
         this.lastMessage = lastMessage;
+        unreadMessages = false;
+        online = false;
     }
 
 
@@ -51,5 +55,21 @@ public class ChatListUser extends MessageUser {
 
     public void reverseTime(){
         lastMessageTime = -1* lastMessageTime;
+    }
+
+    public boolean getUnreadMessages() {
+        return unreadMessages;
+    }
+
+    public void setUnreadMessages(boolean unreadMessages) {
+        this.unreadMessages = unreadMessages;
+    }
+
+    public boolean isOnline() {
+        return online;
+    }
+
+    public void setOnline(boolean online) {
+        this.online = online;
     }
 }

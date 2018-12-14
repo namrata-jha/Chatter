@@ -6,9 +6,12 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.Toast;
 
+import com.firebase.ui.auth.ui.email.WelcomeBackPasswordPrompt;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -17,6 +20,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Objects;
 
@@ -29,6 +33,74 @@ public class ChatRoomActivity extends AppCompatActivity {
     private MessageUser userData;
     private MessageUser myData;
 
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference();
+
+        dbRef.child("chats").child(myUid)
+                .child("chat_list")
+                .child(userUid)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        if (dataSnapshot.exists()){
+                            FirebaseDatabase.getInstance().getReference()
+                                    .child("chats")
+                                    .child(myUid)
+                                    .child("chat_list")
+                                    .child(userUid)
+                                    .child("unreadMessages")
+                                    .setValue(false);
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+
+                    }
+                });
+
+        setUserOnlineState(true);
+
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.i("MyLogs", "onPause called");
+
+        DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference();
+
+        dbRef.child("chats").child(myUid)
+                .child("chat_list")
+                .child(userUid)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        if (dataSnapshot.exists()){
+                            FirebaseDatabase.getInstance().getReference()
+                                    .child("chats")
+                                    .child(myUid)
+                                    .child("chat_list")
+                                    .child(userUid)
+                                    .child("unreadMessages")
+                                    .setValue(false);
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+
+                    }
+                });
+
+            setUserOnlineState(false);
+    }
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -36,10 +108,13 @@ public class ChatRoomActivity extends AppCompatActivity {
 
         myUid = FirebaseAuth.getInstance().getUid();
         userUid = getIntent().getStringExtra("user_uid");
-        String userName = getIntent().getStringExtra("user_name");
-        Objects.requireNonNull(getSupportActionBar()).setTitle(userName);
 
-        DatabaseReference ref = FirebaseDatabase.getInstance().getReference().child("users");
+        final String userName = getIntent().getStringExtra("user_name");
+        Objects.requireNonNull(getSupportActionBar()).setTitle(userName);
+        getSupportActionBar().setHomeButtonEnabled(true);
+//        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+
+        final DatabaseReference ref = FirebaseDatabase.getInstance().getReference().child("users");
 
         ref.orderByChild("userID").equalTo(userUid)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
@@ -75,16 +150,15 @@ public class ChatRoomActivity extends AppCompatActivity {
                     }
                 });
 
-
         FloatingActionButton fab = findViewById(R.id.fab);
 
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 EditText input = findViewById(R.id.input);
-                DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference();
+                final DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference();
                 // Read the input field and push a new instance of ChatMessage to the Firebase database
-                String message = input.getText().toString();
+                final String message = input.getText().toString();
                 if (!message.equals("")) {
                     dbRef.child("chats")
                             .child(myUid)
@@ -98,18 +172,50 @@ public class ChatRoomActivity extends AppCompatActivity {
                             .push()
                             .setValue(new ChatMessage(message,myData));
 
+                    dbRef.child("users")
+                            .child(userUid)
+                            .child("online")
+                            .addListenerForSingleValueEvent(new ValueEventListener() {
+                                @Override
+                                public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                                    if(dataSnapshot.exists()){
+                                        boolean online = dataSnapshot.getValue(Boolean.class);
+                                        dbRef.child("chats")
+                                                .child(myUid)
+                                                .child("chat_list")
+                                                .child(userUid)
+                                                .setValue(new ChatListUser(userData, -1* new Date().getTime()
+                                                        , message, false, online));
+                                    }
+                                    else {
+                                        dbRef.child("chats")
+                                                .child(myUid)
+                                                .child("chat_list")
+                                                .child(userUid)
+                                                .setValue(new ChatListUser(userData, -1* new Date().getTime(), message));
+                                    }
+                                }
+
+                                @Override
+                                public void onCancelled(@NonNull DatabaseError databaseError) {
+
+                                }
+                            });
 
                     dbRef.child("chats")
                             .child(myUid)
                             .child("chat_list")
-                            .child(userData.getUserID())
+                            .child(userUid)
                             .setValue(new ChatListUser(userData, -1* new Date().getTime(), message));
+
 
                     dbRef.child("chats")
                             .child(userUid)
                             .child("chat_list")
-                            .child(myData.getUserID())
-                            .setValue(new ChatListUser(myData, -1* new Date().getTime(), message));
+                            .child(myUid)
+                            .setValue(new ChatListUser(myData, -1* new Date().getTime()
+                                    , message, true, true));
+
 
                     // Clear the input
                     input.setText("");
@@ -120,6 +226,8 @@ public class ChatRoomActivity extends AppCompatActivity {
 
         displayChatMessages();
     }
+
+
 
     private void displayChatMessages(){
 
@@ -158,5 +266,41 @@ public class ChatRoomActivity extends AppCompatActivity {
         listOfMessages.setAdapter(adapter);
 
         listOfMessages.setLayoutManager(layoutManager);
+    }
+
+    public void setUserOnlineState(final boolean state){
+        Boolean bool = state;
+        final String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        FirebaseDatabase.getInstance().getReference().child("users").child(uid).child("online").setValue(bool);
+
+        final DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference();
+        DatabaseReference chatRef = dbRef
+                .child("chats")
+                .child(uid)
+                .child("chat_list");
+
+        chatRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                ArrayList<String> chatList = new ArrayList<>();
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    chatList.add(snapshot.getKey());
+                }
+                for (String userUid : chatList) {
+                    dbRef
+                            .child("chats")
+                            .child(userUid)
+                            .child("chat_list")
+                            .child(uid)
+                            .child("online")
+                            .setValue(state);
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
     }
 }

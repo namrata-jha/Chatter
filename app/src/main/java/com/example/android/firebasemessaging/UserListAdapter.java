@@ -1,19 +1,26 @@
 package com.example.android.firebasemessaging;
 
+import android.content.Context;
 import android.content.Intent;
+import android.graphics.Typeface;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.text.format.DateFormat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.firebase.ui.database.FirebaseRecyclerAdapter;
 import com.google.firebase.database.Query;
 
+import static com.example.android.firebasemessaging.R.color.timeColor;
+
 
 public class UserListAdapter extends FirebaseRecyclerAdapter<ChatListUser, UserListAdapter.MyUserHolder> {
+
+    Context context;
 
 
     /**
@@ -26,8 +33,9 @@ public class UserListAdapter extends FirebaseRecyclerAdapter<ChatListUser, UserL
      * @param4 ref             The Firebase location to watch for data changes. Can also be a slice of a location,
      *                        using some combination of {@code limit()}, {@code startAt()}, and {@code endAt()}.
      */
-    public UserListAdapter(int modelLayout, Query ref) {
+    public UserListAdapter(int modelLayout, Query ref, Context context) {
         super(ChatListUser.class, modelLayout, MyUserHolder.class, ref);
+        this.context = context;
 
     }
 
@@ -43,19 +51,38 @@ public class UserListAdapter extends FirebaseRecyclerAdapter<ChatListUser, UserL
         model.reverseTime();
         viewHolder.userName.setText(model.getUserName());
         viewHolder.userMessage.setText(model.getLastMessage());
-        viewHolder.userTime.setText(DateFormat.format("h:mm a\nMMM d", model.getLastMessageTime()));
+        viewHolder.userTime.setText(DateFormat.format("h:mm a", model.getLastMessageTime()));
+        if(model.getUnreadMessages()){
+            viewHolder.unreadMessages.setVisibility(View.VISIBLE);
+            viewHolder.userTime.setTextColor(context.getResources().getColor(R.color.timeColor));
+            viewHolder.userMessage.setTypeface(viewHolder.userMessage.getTypeface(), Typeface.BOLD);
+        }
+        else{
+            viewHolder.unreadMessages.setVisibility(View.INVISIBLE);
+            viewHolder.userTime.setTextColor(context.getResources().getColor(android.R.color.tab_indicator_text));
+            viewHolder.userMessage.setTypeface(null, Typeface.NORMAL);
+        }
+        if(model.isOnline()){
+            viewHolder.online.setVisibility(View.VISIBLE);
+        }
+        else{
+            viewHolder.online.setVisibility(View.GONE);
+        }
     }
 
 
     class MyUserHolder extends RecyclerView.ViewHolder{
 
         TextView userName, userMessage, userTime;
+        ImageView unreadMessages, online;
 
         MyUserHolder(@NonNull final View itemView) {
             super(itemView);
             userName = itemView.findViewById(R.id.user_name);
             userMessage = itemView.findViewById(R.id.user_message);
             userTime = itemView.findViewById(R.id.user_time);
+            unreadMessages = itemView.findViewById(R.id.unread);
+            online = itemView.findViewById(R.id.online_label);
 
             itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
