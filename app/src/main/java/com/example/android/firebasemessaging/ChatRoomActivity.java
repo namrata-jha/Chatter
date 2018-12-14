@@ -109,7 +109,6 @@ public class ChatRoomActivity extends AppCompatActivity {
         final String userName = getIntent().getStringExtra("user_name");
         Objects.requireNonNull(getSupportActionBar()).setTitle(userName);
 //        getSupportActionBar().setHomeButtonEnabled(true);
-        getSupportActionBar().setHomeAsUpIndicator(R.drawable.ic_arrow_back_24dp);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
         final DatabaseReference ref = FirebaseDatabase.getInstance().getReference().child("users");
