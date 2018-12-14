@@ -5,6 +5,13 @@
     <item
         android:title="Sign out"
         app:showAsAction="never"
+        android:orderInCategory="2"
         android:id="@+id/menu_sign_out"/>
+
+    <item
+        android:title="Settings"
+        app:showAsAction="never"
+        android:orderInCategory="1"
+        android:id="@+id/menu_settings"/>
 
 </menu>

@@ -6,7 +6,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 
@@ -69,7 +68,6 @@ public class ChatRoomActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        Log.i("MyLogs", "onPause called");
 
         DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference();
 
@@ -110,8 +108,9 @@ public class ChatRoomActivity extends AppCompatActivity {
 
         final String userName = getIntent().getStringExtra("user_name");
         Objects.requireNonNull(getSupportActionBar()).setTitle(userName);
-        getSupportActionBar().setHomeButtonEnabled(true);
-//        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+//        getSupportActionBar().setHomeButtonEnabled(true);
+        getSupportActionBar().setHomeAsUpIndicator(R.drawable.ic_arrow_back_24dp);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
         final DatabaseReference ref = FirebaseDatabase.getInstance().getReference().child("users");
 
@@ -279,7 +278,6 @@ public class ChatRoomActivity extends AppCompatActivity {
                     public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                         if (dataSnapshot.exists()) {
                             mFavourite = dataSnapshot.getValue(Integer.class);
-                            Log.i("MyLogs", "MStage 1");
                             dbRef.child("users")
                                     .child(userUid)
                                     .child("online")
@@ -287,7 +285,6 @@ public class ChatRoomActivity extends AppCompatActivity {
                                         @Override
                                         public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                                             if (dataSnapshot.exists()) {
-                                                Log.i("MyLogs", "MStage 2 (if)");
                                                 boolean online = dataSnapshot.getValue(Boolean.class);
                                                 dbRef.child("chats")
                                                         .child(myUid)
@@ -296,7 +293,6 @@ public class ChatRoomActivity extends AppCompatActivity {
                                                         .setValue(new ChatListUser(userData, -1 * new Date().getTime()
                                                                 , message, false, online, mFavourite));
                                             } else {
-                                                Log.i("MyLogs", "MStage 2 (else)");
                                                 dbRef.child("chats")
                                                         .child(myUid)
                                                         .child("chat_list")
@@ -313,7 +309,6 @@ public class ChatRoomActivity extends AppCompatActivity {
                                     });
                         }
                         else {
-                            Log.i("MyLogs", "MStage 4 Fav doesn't exist");
                             dbRef.child("users")
                                     .child(userUid)
                                     .child("online")
@@ -321,7 +316,6 @@ public class ChatRoomActivity extends AppCompatActivity {
                                         @Override
                                         public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                                             if (dataSnapshot.exists()) {
-                                                Log.i("MyLogs", "MStage 5(if)");
                                                 boolean online = dataSnapshot.getValue(Boolean.class);
                                                 dbRef.child("chats")
                                                         .child(myUid)
@@ -330,7 +324,6 @@ public class ChatRoomActivity extends AppCompatActivity {
                                                         .setValue(new ChatListUser(userData, -1 * new Date().getTime()
                                                                 , message, false, online, 0));
                                             } else {
-                                                Log.i("MyLogs", "MStage 5 (else)");
                                                 dbRef.child("chats")
                                                         .child(myUid)
                                                         .child("chat_list")
@@ -368,7 +361,6 @@ public class ChatRoomActivity extends AppCompatActivity {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                         if (dataSnapshot.exists()) {
-                            Log.i("MyLogs", "UStage1 (if)");
                             uFavourite = dataSnapshot.getValue(Integer.class);
 
                             dbRef.child("chats")
@@ -379,7 +371,6 @@ public class ChatRoomActivity extends AppCompatActivity {
                                             , message, true, true, uFavourite));
                         }
                         else{
-                            Log.i("MyLogs", "UStage 1 (else");
                             dbRef.child("chats")
                                     .child(userUid)
                                     .child("chat_list")

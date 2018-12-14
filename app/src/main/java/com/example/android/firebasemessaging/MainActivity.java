@@ -6,7 +6,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -36,9 +35,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        Log.i("MyLogs", "onResume called");
-        if(FirebaseAuth.getInstance().getCurrentUser() != null)  {
+        if (FirebaseAuth.getInstance().getCurrentUser() != null) {
             setUserOnlineState(true);
+            displayUserList();
         }
 
     }
@@ -46,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        if(FirebaseAuth.getInstance().getCurrentUser() != null){
+        if (FirebaseAuth.getInstance().getCurrentUser() != null) {
             setUserOnlineState(false);
         }
     }
@@ -55,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if(FirebaseAuth.getInstance().getCurrentUser() != null) {
+        if (FirebaseAuth.getInstance().getCurrentUser() != null) {
             setUserOnlineState(false);
         }
     }
@@ -65,7 +64,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        if(FirebaseAuth.getInstance().getCurrentUser() == null) {
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
             // Start sign in/sign up activity
             startActivityForResult(
                     AuthUI.getInstance()
@@ -87,9 +86,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
-
     }
-
 
 
     @Override
@@ -97,8 +94,8 @@ public class MainActivity extends AppCompatActivity {
                                     Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if(requestCode == SIGN_IN_REQUEST_CODE) {
-            if(resultCode == RESULT_OK) {
+        if (requestCode == SIGN_IN_REQUEST_CODE) {
+            if (resultCode == RESULT_OK) {
                 Toast.makeText(this,
                         "Successfully signed in. Welcome!",
                         Toast.LENGTH_LONG)
@@ -123,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        if(requestCode == START_CHAT_REQUEST_CODE) {
+        if (requestCode == START_CHAT_REQUEST_CODE) {
             if (resultCode == RESULT_OK) {
                 String userUid = data.getStringExtra("uid");
                 String userName = data.getStringExtra("user_name");
@@ -140,7 +137,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        if(item.getItemId() == R.id.menu_sign_out) {
+        if (item.getItemId() == R.id.menu_sign_out) {
             setUserOnlineState(false);
             AuthUI.getInstance().signOut(this)
                     .addOnCompleteListener(new OnCompleteListener<Void>() {
@@ -156,9 +153,12 @@ public class MainActivity extends AppCompatActivity {
                         }
                     });
         }
+
+        if(item.getItemId()==R.id.menu_settings){
+            startActivity(new Intent(getApplicationContext(), SettingsActivity.class));
+        }
         return true;
     }
-
 
 
     public void startChat(View view) {
@@ -166,28 +166,41 @@ public class MainActivity extends AppCompatActivity {
         startActivityForResult(intent, START_CHAT_REQUEST_CODE);
     }
 
-    private void beginChat(String userUid, String userName){
-        if(!userUid.equals(FirebaseAuth.getInstance().getCurrentUser().getUid())) {
+    private void beginChat(String userUid, String userName) {
+        if (!userUid.equals(FirebaseAuth.getInstance().getCurrentUser().getUid())) {
             final Intent intent = new Intent(getApplicationContext(), ChatRoomActivity.class);
             intent.putExtra("user_uid", userUid);
             intent.putExtra("user_name", userName);
             startActivity(intent);
-        }
-        else{
+        } else {
             Toast.makeText(this, "Cannot initiate chat with self.", Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void displayUserList(){
+    private void displayUserList() {
         final RecyclerView listOfUsers = findViewById(R.id.list_of_users);
 
-        Query query = FirebaseDatabase.getInstance()
-                .getReference()
-                .child("chats")
-                .child(Objects.requireNonNull(FirebaseAuth.getInstance().getUid()))
-                .child("chat_list")
-                .orderByChild("lastMessageTime")
-                .limitToLast(50);
+        Query query;
+        if(getApplicationContext().getSharedPreferences
+                ("settings", MODE_PRIVATE).getBoolean("VIEW_FAVOURITE", false)) {
+            query = FirebaseDatabase.getInstance()
+                    .getReference()
+                    .child("chats")
+                    .child(Objects.requireNonNull(FirebaseAuth.getInstance().getUid()))
+                    .child("chat_list")
+                    .orderByChild("favourite")
+                    .limitToLast(50);
+        }
+
+        else {
+            query = FirebaseDatabase.getInstance()
+                    .getReference()
+                    .child("chats")
+                    .child(Objects.requireNonNull(FirebaseAuth.getInstance().getUid()))
+                    .child("chat_list")
+                    .orderByChild("lastMessageTime")
+                    .limitToLast(50);
+        }
 
         UserListAdapter adapter = new UserListAdapter(R.layout.user_layout, query, getApplicationContext());
         listOfUsers.setAdapter(adapter);
@@ -195,7 +208,8 @@ public class MainActivity extends AppCompatActivity {
         final LinearLayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
         listOfUsers.setLayoutManager(layoutManager);
     }
-    public void setUserOnlineState(final boolean state){
+
+    public void setUserOnlineState(final boolean state) {
         Boolean bool = state;
         final String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
         FirebaseDatabase.getInstance().getReference().child("users").child(uid).child("online").setValue(bool);

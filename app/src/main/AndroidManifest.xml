@@ -19,9 +19,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
         <activity android:name=".ChatRoomActivity" />
-        <activity android:name=".StartChatActivity"></activity>
+        <activity android:name=".StartChatActivity" />
+        <activity android:name=".ApplicationPreferenceActivity" />
+        <activity android:name=".SettingsActivity"></activity>
     </application>
 
 </manifest>
